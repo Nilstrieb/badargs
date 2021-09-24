@@ -32,7 +32,7 @@ pub struct SchemaCommand {
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct Schema {
     longs: HashMap<&'static str, SchemaCommand>,
-    shorts: HashMap<&'static str, SchemaCommand>,
+    shorts: HashMap<char, SchemaCommand>,
 }
 
 impl Schema {
@@ -48,19 +48,23 @@ impl Schema {
 
     fn add_command(&mut self, long_name: &'static str, command: SchemaCommand) -> Result<()> {
         if let Some(_) = self.longs.insert(long_name, command) {
-            Err(ArgError::NameAlreadyExists(long_name))
+            Err(ArgError::NameAlreadyExists(long_name.to_string()))
         } else {
             Ok(())
         }
     }
 
-    fn add_short_command(
-        &mut self,
-        short_name: &'static str,
-        command: SchemaCommand,
-    ) -> Result<()> {
+    pub fn short(&self, name: char) -> Option<&SchemaCommand> {
+        self.shorts.get(&name)
+    }
+
+    pub fn long(&self, name: &str) -> Option<&SchemaCommand> {
+        self.longs.get(name)
+    }
+
+    fn add_short_command(&mut self, short_name: char, command: SchemaCommand) -> Result<()> {
         if let Some(_) = self.shorts.insert(short_name, command) {
-            Err(ArgError::NameAlreadyExists(short_name))
+            Err(ArgError::NameAlreadyExists(short_name.to_string()))
         } else {
             Ok(())
         }
@@ -112,10 +116,10 @@ mod test {
     use crate::schema::{Schema, SchemaCommand, SchemaKind};
     use crate::{arg, ArgError};
 
-    arg!(OutFile: "output", "o" -> Option<String>);
-    arg!(Force: "force", "f" -> bool);
+    arg!(OutFile: "output", 'o' -> Option<String>);
+    arg!(Force: "force", 'f' -> bool);
     arg!(SetUpstream: "set-upstream" -> String);
-    arg!(OutFile2: "output", "o" -> Option<String>);
+    arg!(OutFile2: "output", 'o' -> Option<String>);
 
     #[test]
     fn one_command_schema() {
@@ -124,9 +128,8 @@ mod test {
             kind: SchemaKind::OptionString,
         };
         assert_eq!(schema.longs.get("output"), Some(&out_file));
-        assert_eq!(schema.shorts.get("o"), Some(&out_file));
+        assert_eq!(schema.shorts.get(&'o'), Some(&out_file));
         assert_eq!(schema.longs.get("o"), None);
-        assert_eq!(schema.shorts.get("output"), None);
     }
 
     #[test]
@@ -140,14 +143,12 @@ mod test {
         };
 
         assert_eq!(schema.longs.get("output"), Some(&out_file));
-        assert_eq!(schema.shorts.get("o"), Some(&out_file));
+        assert_eq!(schema.shorts.get(&'o'), Some(&out_file));
         assert_eq!(schema.longs.get("o"), None);
-        assert_eq!(schema.shorts.get("output"), None);
 
         assert_eq!(schema.longs.get("force"), Some(&force));
-        assert_eq!(schema.shorts.get("f"), Some(&force));
+        assert_eq!(schema.shorts.get(&'f'), Some(&force));
         assert_eq!(schema.longs.get("f"), None);
-        assert_eq!(schema.shorts.get("force"), None);
     }
 
     #[test]
@@ -164,26 +165,19 @@ mod test {
         };
 
         assert_eq!(schema.longs.get("output"), Some(&out_file));
-        assert_eq!(schema.shorts.get("o"), Some(&out_file));
+        assert_eq!(schema.shorts.get(&'o'), Some(&out_file));
         assert_eq!(schema.longs.get("o"), None);
-        assert_eq!(schema.shorts.get("output"), None);
 
         assert_eq!(schema.longs.get("force"), Some(&force));
-        assert_eq!(schema.shorts.get("f"), Some(&force));
+        assert_eq!(schema.shorts.get(&'f'), Some(&force));
         assert_eq!(schema.longs.get("f"), None);
-        assert_eq!(schema.shorts.get("force"), None);
 
         assert_eq!(schema.longs.get("set-upstream"), Some(&set_upstream));
-        assert_eq!(schema.shorts.get("set-upstream"), None);
     }
 
     #[test]
     fn double_error() {
         let schema = Schema::create::<(OutFile, OutFile2)>();
-        assert!(matches!(
-            schema,
-            // it doesn't matter which one gets reported first
-            Err(ArgError::NameAlreadyExists("output")) | Err(ArgError::NameAlreadyExists("o"))
-        ));
+        assert!(schema.is_err());
     }
 }

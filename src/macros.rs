@@ -17,7 +17,7 @@ macro_rules! arg {
                 $long
             }
 
-            fn short() -> Option<&'static str> {
+            fn short() -> Option<char> {
                 $short
             }
         }

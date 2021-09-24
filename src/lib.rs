@@ -1,4 +1,5 @@
 mod macros;
+mod parse;
 mod schema;
 
 use crate::parse::CliArgs;
@@ -17,7 +18,7 @@ where
 {
     let arg_schema = Schema::create::<S>()?;
 
-    let args = CliArgs::from_args(arg_schema, std::env::args_os())?;
+    let args = CliArgs::from_args(&arg_schema, std::env::args())?;
 
     Ok(BadArgs { args })
 }
@@ -29,14 +30,14 @@ where
 ///
 /// ```
 /// # use badargs::arg;
-/// arg!(OutFile: "output", "o" -> Option<String>);
+/// arg!(OutFile: "output", 'o' -> Option<String>);
 /// // OutFile now implements CliArg
 /// ```
 pub trait CliArg {
     type Content: CliReturnValue;
 
     fn long() -> &'static str;
-    fn short() -> Option<&'static str>;
+    fn short() -> Option<char>;
 }
 
 /// The struct containing parsed argument information
@@ -92,34 +93,10 @@ mod error {
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub enum ArgError {
         InvalidUtf8,
-        NameAlreadyExists(&'static str),
+        NameAlreadyExists(String),
         InvalidSchema(String),
         IdkYet,
-    }
-}
-
-mod parse {
-    use super::Result;
-    use crate::schema::Schema;
-    use std::collections::HashMap;
-    use std::ffi::OsString;
-
-    #[derive(Debug, Clone, Default)]
-    pub struct CliArgs {
-        pub isize: HashMap<&'static str, isize>,
-        pub usize: HashMap<&'static str, isize>,
-        pub string: HashMap<&'static str, String>,
-        pub option_string: HashMap<&'static str, Option<String>>,
-        pub bool: HashMap<&'static str, bool>,
-    }
-
-    impl CliArgs {
-        pub fn from_args(_schema: Schema, args: impl Iterator<Item = OsString>) -> Result<Self> {
-            let result = Self::default();
-            let mut args = args;
-            while let Some(_arg) = args.next() {}
-
-            Ok(result)
-        }
+        UnnamedArgument,
+        SingleMinus,
     }
 }
