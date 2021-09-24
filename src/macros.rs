@@ -10,7 +10,7 @@ macro_rules! arg {
         #[derive(Default)]
         struct $name;
 
-        impl ::badargs::CliArg for $name {
+        impl $crate::CliArg for $name {
             type Content = $result;
 
             fn long() -> &'static str {

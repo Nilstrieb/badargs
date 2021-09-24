@@ -1,5 +1,4 @@
 use badargs::arg;
-use badargs::CliArg;
 
 arg!(OutFile: "output", "o" -> Option<String>);
 arg!(Force: "force", "f" -> bool);
