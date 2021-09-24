@@ -1,24 +1,14 @@
-use badargs::{CliArg, CliArgInfo, Template};
-use std::collections::HashMap;
+use badargs::arg;
+use badargs::CliArg;
 
-#[derive(Default)]
-struct OutFile;
+arg!(OutFile: "output", "o" -> Option<String>);
+arg!(Force: "force", "f" -> bool);
+arg!(OLevel: "optimize" -> usize);
 
 fn main() {
-    let args = badargs::badargs(Template {
-        options: {
-            let mut map = HashMap::new();
-            map.insert(
-                Box::new(OutFile),
-                CliArgInfo {
-                    name: "output".to_string(),
-                    allow_short: true,
-                    takes_value: true,
-                },
-            );
-            map
-        },
-    });
+    let args = badargs::badargs::<(OutFile, (Force, OLevel))>().unwrap();
 
-    let outfile = args.get::<OutFile>();
+    let _outfile = args.get::<OutFile>();
+    let _force = args.get::<Force>();
+    let _o_level = args.get::<OLevel>();
 }
