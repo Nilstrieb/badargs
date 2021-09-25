@@ -4,17 +4,22 @@
 //! This makes the interface of this crate fully type-safe! (and kind of cursed)
 
 use super::Result;
-use crate::{ArgError, CliArg, CliReturnValue};
+use crate::{CliArg, CliReturnValue, SchemaError};
 use std::collections::HashMap;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum SchemaKind {
+    Required(SchemaKindType),
+    Optional(SchemaKindType),
+}
 
 ///
 /// The type of value the argument returns
 ///
 /// This could *maybe* also be solved with trait objects but lets keep this for now
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum SchemaKind {
+pub enum SchemaKindType {
     String,
-    OptionString,
     Bool,
     INum,
     UNum,
@@ -24,7 +29,9 @@ pub enum SchemaKind {
 /// A single command in the schema
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub struct SchemaCommand {
-    kind: SchemaKind,
+    pub kind: SchemaKind,
+    pub long: &'static str,
+    pub short: Option<char>,
 }
 
 ///
@@ -48,7 +55,7 @@ impl Schema {
 
     fn add_command(&mut self, long_name: &'static str, command: SchemaCommand) -> Result<()> {
         if let Some(_) = self.longs.insert(long_name, command) {
-            Err(ArgError::NameAlreadyExists(long_name.to_string()))
+            Err(SchemaError::NameAlreadyExists(long_name.to_string()))
         } else {
             Ok(())
         }
@@ -64,7 +71,7 @@ impl Schema {
 
     fn add_short_command(&mut self, short_name: char, command: SchemaCommand) -> Result<()> {
         if let Some(_) = self.shorts.insert(short_name, command) {
-            Err(ArgError::NameAlreadyExists(short_name.to_string()))
+            Err(SchemaError::NameAlreadyExists(short_name.to_string()))
         } else {
             Ok(())
         }
@@ -101,20 +108,20 @@ where
 {
     fn add_schema(schema: &mut Schema) -> Result<()> {
         let kind = T::Content::kind();
-        let name = T::long();
+        let long = T::long();
         let short = T::short();
-        let command = SchemaCommand { kind };
+        let command = SchemaCommand { kind, long, short };
         if let Some(short_name) = short {
             schema.add_short_command(short_name, command)?;
         }
-        schema.add_command(name, command)
+        schema.add_command(long, command)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::schema::{Schema, SchemaCommand, SchemaKind};
-    use crate::{arg, ArgError};
+    use crate::arg;
+    use crate::schema::{Schema, SchemaCommand, SchemaKind, SchemaKindType};
 
     arg!(OutFile: "output", 'o' -> Option<String>);
     arg!(Force: "force", 'f' -> bool);
@@ -125,7 +132,9 @@ mod test {
     fn one_command_schema() {
         let schema = Schema::create::<OutFile>().unwrap();
         let out_file = SchemaCommand {
-            kind: SchemaKind::OptionString,
+            kind: SchemaKind::Optional(SchemaKindType::String),
+            long: "output",
+            short: Some('o'),
         };
         assert_eq!(schema.longs.get("output"), Some(&out_file));
         assert_eq!(schema.shorts.get(&'o'), Some(&out_file));
@@ -136,10 +145,14 @@ mod test {
     fn two_command_schema() {
         let schema = Schema::create::<(OutFile, Force)>().unwrap();
         let out_file = SchemaCommand {
-            kind: SchemaKind::OptionString,
+            kind: SchemaKind::Optional(SchemaKindType::String),
+            long: "output",
+            short: Some('o'),
         };
         let force = SchemaCommand {
-            kind: SchemaKind::Bool,
+            kind: SchemaKind::Required(SchemaKindType::Bool),
+            long: "force",
+            short: Some('f'),
         };
 
         assert_eq!(schema.longs.get("output"), Some(&out_file));
@@ -155,13 +168,19 @@ mod test {
     fn three_command_schema() {
         let schema = Schema::create::<(OutFile, (Force, SetUpstream))>().unwrap();
         let out_file = SchemaCommand {
-            kind: SchemaKind::OptionString,
+            kind: SchemaKind::Optional(SchemaKindType::String),
+            long: "output",
+            short: Some('o'),
         };
         let force = SchemaCommand {
-            kind: SchemaKind::Bool,
+            kind: SchemaKind::Required(SchemaKindType::Bool),
+            long: "force",
+            short: Some('f'),
         };
         let set_upstream = SchemaCommand {
-            kind: SchemaKind::String,
+            kind: SchemaKind::Required(SchemaKindType::String),
+            long: "set-upstream",
+            short: None,
         };
 
         assert_eq!(schema.longs.get("output"), Some(&out_file));

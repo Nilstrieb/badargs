@@ -5,10 +5,11 @@ mod schema;
 use crate::parse::CliArgs;
 use crate::schema::{IntoSchema, Schema, SchemaKind};
 
-pub use error::ArgError;
+pub use error::SchemaError;
 pub use macros::*;
+use std::any::Any;
 
-pub type Result<T> = std::result::Result<T, ArgError>;
+pub type Result<T> = std::result::Result<T, SchemaError>;
 
 ///
 /// Parses the command line arguments based on the provided schema S
@@ -18,7 +19,7 @@ where
 {
     let arg_schema = Schema::create::<S>()?;
 
-    let args = CliArgs::from_args(&arg_schema, std::env::args())?;
+    let args = CliArgs::from_args(&arg_schema, std::env::args()).expect("todo");
 
     Ok(BadArgs { args })
 }
@@ -33,7 +34,8 @@ where
 /// arg!(OutFile: "output", 'o' -> Option<String>);
 /// // OutFile now implements CliArg
 /// ```
-pub trait CliArg {
+// This trait requires any because some dynamic typing is done in the background
+pub trait CliArg: Any {
     type Content: CliReturnValue;
 
     fn long() -> &'static str;
@@ -41,7 +43,7 @@ pub trait CliArg {
 }
 
 /// The struct containing parsed argument information
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct BadArgs {
     args: CliArgs,
 }
@@ -52,7 +54,10 @@ impl BadArgs {
     where
         T: CliArg,
     {
-        todo!()
+        let long_name = T::long();
+        self.args
+            .get::<T::Content>(long_name)
+            .expect("it has been validated")
     }
 }
 
@@ -89,14 +94,19 @@ mod sealed {
 }
 
 mod error {
-    /// The error type for `badargs`
+    /// Invalid schema
     #[derive(Debug, Clone, Eq, PartialEq)]
-    pub enum ArgError {
-        InvalidUtf8,
+    pub enum SchemaError {
         NameAlreadyExists(String),
         InvalidSchema(String),
-        IdkYet,
-        UnnamedArgument,
+    }
+
+    /// Invalid arguments provided
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    pub enum CallError {
         SingleMinus,
+        UnnamedArgument,
+        ShortFlagNotFound(char),
+        ExpectedValue(String),
     }
 }
