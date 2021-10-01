@@ -2,25 +2,24 @@ use crate::error::CallError;
 use crate::schema::{Schema, SchemaKind};
 use std::any::Any;
 use std::collections::HashMap;
-use std::iter::Peekable;
 
 type Result<T> = std::result::Result<T, CallError>;
 
 #[derive(Debug, Default)]
-pub struct CliArgs {
+pub(crate) struct CliArgs {
     args: HashMap<&'static str, Box<dyn Any>>,
     unnamed: Vec<String>,
 }
 
 impl CliArgs {
-    pub fn from_args(schema: &Schema, args: impl Iterator<Item = String>) -> Result<Self> {
+    pub fn from_args(schema: &Schema, mut args: impl Iterator<Item = String>) -> Result<Self> {
         let mut result = Self::default();
 
-        let mut args = args.peekable();
         while let Some(arg) = args.next() {
-            if let Some(shorts) = arg.strip_prefix('-') {
+            if let Some(long) = arg.strip_prefix("--") {
+                parse_long(schema, &mut result, long, &mut args)?;
+            } else if let Some(shorts) = arg.strip_prefix('-') {
                 parse_shorts(schema, &mut result, shorts, &mut args)?;
-            } else if let Some(_longs) = arg.strip_prefix("--") {
             } else {
                 result.unnamed.push(arg);
             }
@@ -30,7 +29,6 @@ impl CliArgs {
     }
 
     /// Get a value from the map, expecting it to have type T
-    /// Important: T should never be Option, making thisfh sjfhsekld fjkdsaljföoilkaesdf jikasoeldöojfliköesdafjisdolkyafj idrs
     pub fn get<T: Any>(&self, long: &str) -> Option<&T> {
         let any = self.args.get(long)?;
         any.downcast_ref()
@@ -49,55 +47,88 @@ fn parse_shorts(
     schema: &Schema,
     results: &mut CliArgs,
     shorts: &str,
-    args: &mut Peekable<impl Iterator<Item = String>>,
+    args: &mut impl Iterator<Item = String>,
 ) -> Result<()> {
     // there are kinds of short arguments
     // single shorts that takes values: `-o main`
     // multiple flags combined: `-xzf`
     // combining these is invalid: `-xo main`
 
-    let mut chars = shorts.chars();
+    let mut all_shorts = shorts.chars();
 
-    let first_flag = chars.next();
+    let first_flag = all_shorts.next();
 
     if let Some(flag) = first_flag {
         let command = schema
             .short(flag)
             .ok_or_else(|| CallError::ShortFlagNotFound(flag))?;
 
-        match command.kind {
-            SchemaKind::String => {
-                let string = args
-                    .next()
-                    .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?;
-                results.insert(command.long, Box::new(string));
-            }
-            SchemaKind::INum => {
-                let integer = args
-                    .next()
-                    .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?
-                    .parse::<isize>()
-                    .map_err(|_| CallError::INan(command.long.to_string()))?;
-                results.insert(command.long, Box::new(integer))
-            }
-            SchemaKind::UNum => {
-                let integer = args
-                    .next()
-                    .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?
-                    .parse::<usize>()
-                    .map_err(|_| CallError::UNan(command.long.to_string()))?;
-                results.insert(command.long, Box::new(integer))
-            }
-            SchemaKind::Bool => {
-                results.insert(command.long, Box::new(true));
-            }
-        }
+        parse_value(command.kind, results, &command.long, args)?;
     } else {
         return Err(CallError::SingleMinus);
     }
 
-    for _flag_name in chars {}
+    for flag in all_shorts {
+        let command = schema
+            .short(flag)
+            .ok_or_else(|| CallError::ShortFlagNotFound(flag))?;
 
+        if let SchemaKind::Bool = command.kind {
+            results.insert(&command.long, Box::new(true));
+        } else {
+            return Err(CallError::CombinedShortWithValue(command.long.to_string()));
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_long(
+    schema: &Schema,
+    results: &mut CliArgs,
+    long: &str,
+    args: &mut impl Iterator<Item = String>,
+) -> Result<()> {
+    let command = schema
+        .long(long)
+        .ok_or_else(|| CallError::LongFlagNotFound(long.to_string()))?;
+
+    parse_value(command.kind, results, &command.long, args)
+}
+
+fn parse_value(
+    kind: SchemaKind,
+    results: &mut CliArgs,
+    long: &'static str,
+    args: &mut impl Iterator<Item = String>,
+) -> Result<()> {
+    match kind {
+        SchemaKind::String => {
+            let string = args
+                .next()
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string()))?;
+            results.insert(long, Box::new(string));
+        }
+        SchemaKind::INum => {
+            let integer = args
+                .next()
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string()))?
+                .parse::<isize>()
+                .map_err(|_| CallError::INan(long.to_string()))?;
+            results.insert(long, Box::new(integer))
+        }
+        SchemaKind::UNum => {
+            let integer = args
+                .next()
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string()))?
+                .parse::<usize>()
+                .map_err(|_| CallError::UNan(long.to_string()))?;
+            results.insert(long, Box::new(integer))
+        }
+        SchemaKind::Bool => {
+            results.insert(long, Box::new(true));
+        }
+    };
     Ok(())
 }
 
@@ -109,11 +140,20 @@ mod test {
 
     arg!(OutFile: "output", 'o' -> String);
     arg!(Input: "input", 'i' -> String);
-    arg!(Force: "force", 'f' -> bool);
     arg!(SetUpstream: "set-upstream" -> String);
 
+    arg!(Force: "force", 'f' -> bool);
+    arg!(Gentle: "gentle", 'g' -> bool);
+
+    arg!(OLevel: "olevel", 'l' -> usize);
+    arg!(Iq: "iq", 'q' -> isize);
+
     fn schema() -> Schema {
-        Schema::create::<((OutFile, Input), (Force, SetUpstream))>().unwrap()
+        Schema::create::<(
+            (OutFile, (Input, (OLevel, Iq))),
+            ((Force, Gentle), SetUpstream),
+        )>()
+        .unwrap()
     }
 
     fn parse_args(args: &str) -> Result<CliArgs> {
@@ -121,7 +161,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn single_short_flag() {
         let args = parse_args("-f").unwrap();
         assert_eq!(args.get::<bool>("force"), Some(&true))
@@ -140,9 +179,49 @@ mod test {
     }
 
     #[test]
-    fn arg_param_and_unnamed() {
+    fn short_arg_param_and_unnamed() {
         let args = parse_args("-i stdin uwu").unwrap();
         assert_eq!(args.unnamed(), &["uwu"]);
         assert_eq!(args.get::<String>("input"), Some(&"stdin".to_string()))
+    }
+
+    #[test]
+    fn short_numbers() {
+        let args = parse_args("-q -5423 -l 235235").unwrap();
+        assert_eq!(args.get::<isize>("iq"), Some(&-5423));
+        assert_eq!(args.get::<usize>("olevel"), Some(&235235));
+    }
+
+    #[test]
+    fn combined_shorts() {
+        let args = parse_args("-gf").unwrap();
+        assert_eq!(args.get::<bool>("gentle"), Some(&true));
+        assert_eq!(args.get::<bool>("force"), Some(&true));
+    }
+
+    #[test]
+    fn long_flags() {
+        let args = parse_args("--force --gentle").unwrap();
+        assert_eq!(args.get::<bool>("gentle"), Some(&true));
+        assert_eq!(args.get::<bool>("force"), Some(&true));
+    }
+
+    #[test]
+    fn long_params() {
+        let args = parse_args("--output main.c --iq 75").unwrap();
+        assert_eq!(args.get::<isize>("iq"), Some(&75));
+        assert_eq!(args.get::<String>("output"), Some(&"main.c".to_string()))
+    }
+
+    #[test]
+    fn many() {
+        let args = parse_args("--output main.c --iq 75 hallo -fg random").unwrap();
+        assert_eq!(args.unnamed(), &["hallo", "random"]);
+        assert_eq!(args.get::<bool>("gentle"), Some(&true));
+        assert_eq!(args.get::<bool>("force"), Some(&true));
+        assert_eq!(args.get::<String>("output"), Some(&"main.c".to_string()));
+        assert_eq!(args.get::<isize>("iq"), Some(&75));
+        assert_eq!(args.get::<usize>("olevel"), None);
+        assert_eq!(args.get::<String>("input"), None)
     }
 }

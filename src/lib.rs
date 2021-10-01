@@ -106,8 +106,10 @@ mod error {
     pub enum CallError {
         SingleMinus,
         ShortFlagNotFound(char),
+        LongFlagNotFound(String),
         ExpectedValue(String),
         INan(String),
         UNan(String),
+        CombinedShortWithValue(String),
     }
 }

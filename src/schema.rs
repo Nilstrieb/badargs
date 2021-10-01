@@ -4,7 +4,6 @@
 //! This makes the interface of this crate fully type-safe! (and kind of cursed)
 
 use super::Result;
-use crate::error::CallError;
 use crate::{CliArg, CliReturnValue, SchemaError};
 use std::collections::HashMap;
 
