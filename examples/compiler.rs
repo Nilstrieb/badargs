@@ -14,4 +14,5 @@ fn main() {
     println!("output:  {:?}", outfile);
     println!("force:   {:?}", force);
     println!("o-level: {:?}", o_level);
+    println!("other args: {:?}", args.unnamed())
 }
