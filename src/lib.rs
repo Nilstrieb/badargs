@@ -55,9 +55,9 @@ pub fn badargs<S>() -> BadArgs
 where
     S: IntoSchema,
 {
-    let arg_schema = Schema::create::<S>().expect("Invalid schema!");
+    let arg_schema = Schema::create::<S>().expect("Invalid schema");
 
-    let args = CliArgs::from_args(&arg_schema, std::env::args());
+    let args = CliArgs::from_args(&arg_schema, std::env::args_os());
     match args {
         Ok(args) => BadArgs { args },
         Err(err) => reporting::report(err),
@@ -132,6 +132,7 @@ mod sealed {
 
 mod error {
     use crate::schema::SchemaKind;
+    use std::ffi::OsString;
 
     /// Invalid schema
     #[derive(Debug, Clone, Eq, PartialEq)]
@@ -149,5 +150,6 @@ mod error {
         INan(String),
         UNan(String),
         CombinedShortWithValue(String),
+        InvalidUtf8(OsString),
     }
 }

@@ -19,7 +19,8 @@ pub fn report(err: CallError) -> ! {
         }
         CallError::INan(arg) => println!("error: argument '{}' expected a positive integer value, but got an invalid positive integer.", arg),
         CallError::UNan(arg) => println!("error: argument '{}' expected an integer value, but got an invalid integer.", arg),
-        CallError::CombinedShortWithValue(arg) => println!("error: using argument expecting value '{}' in position where only flags are allowed", arg)
+        CallError::CombinedShortWithValue(arg) => println!("error: using argument expecting value '{}' in position where only flags are allowed", arg),
+        CallError::InvalidUtf8(os_str) => println!("error: invalid utf8: '{}'", os_str.to_string_lossy()),
     }
 
     std::process::exit(1)

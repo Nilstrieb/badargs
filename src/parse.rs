@@ -2,6 +2,7 @@ use crate::error::CallError;
 use crate::schema::{Schema, SchemaKind};
 use std::any::Any;
 use std::collections::HashMap;
+use std::ffi::OsString;
 
 type Result<T> = std::result::Result<T, CallError>;
 
@@ -12,10 +13,14 @@ pub(crate) struct CliArgs {
 }
 
 impl CliArgs {
-    pub fn from_args(schema: &Schema, mut args: impl Iterator<Item = String>) -> Result<Self> {
+    pub fn from_args(schema: &Schema, mut args: impl Iterator<Item = OsString>) -> Result<Self> {
         let mut result = Self::default();
 
         while let Some(arg) = args.next() {
+            let arg = arg
+                .into_string()
+                .map_err(|os_str| CallError::InvalidUtf8(os_str))?;
+
             if let Some(long) = arg.strip_prefix("--") {
                 parse_long(schema, &mut result, long, &mut args)?;
             } else if let Some(shorts) = arg.strip_prefix('-') {
@@ -47,7 +52,7 @@ fn parse_shorts(
     schema: &Schema,
     results: &mut CliArgs,
     shorts: &str,
-    args: &mut impl Iterator<Item = String>,
+    args: &mut impl Iterator<Item = OsString>,
 ) -> Result<()> {
     // there are kinds of short arguments
     // single shorts that takes values: `-o main`
@@ -88,7 +93,7 @@ fn parse_long(
     schema: &Schema,
     results: &mut CliArgs,
     long: &str,
-    args: &mut impl Iterator<Item = String>,
+    args: &mut impl Iterator<Item = OsString>,
 ) -> Result<()> {
     let command = schema
         .long(long)
@@ -101,19 +106,23 @@ fn parse_value(
     kind: SchemaKind,
     results: &mut CliArgs,
     long: &'static str,
-    args: &mut impl Iterator<Item = String>,
+    args: &mut impl Iterator<Item = OsString>,
 ) -> Result<()> {
     match kind {
         SchemaKind::String => {
             let string = args
                 .next()
-                .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?;
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
+                .into_string()
+                .map_err(|os_str| CallError::InvalidUtf8(os_str))?;
             results.insert(long, Box::new(string));
         }
         SchemaKind::INum => {
             let integer = args
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
+                .into_string()
+                .map_err(|os_str| CallError::InvalidUtf8(os_str))?
                 .parse::<isize>()
                 .map_err(|_| CallError::INan(long.to_string()))?;
             results.insert(long, Box::new(integer))
@@ -122,6 +131,8 @@ fn parse_value(
             let integer = args
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
+                .into_string()
+                .map_err(|os_str| CallError::InvalidUtf8(os_str))?
                 .parse::<usize>()
                 .map_err(|_| CallError::UNan(long.to_string()))?;
             results.insert(long, Box::new(integer))
@@ -158,7 +169,11 @@ mod test {
     }
 
     fn parse_args(args: &str) -> Result<CliArgs> {
-        CliArgs::from_args(&schema(), args.split_whitespace().map(|s| s.to_owned()))
+        CliArgs::from_args(
+            &schema(),
+            args.split_whitespace()
+                .map(|s| OsString::from(s.to_owned())),
+        )
     }
 
     #[test]
