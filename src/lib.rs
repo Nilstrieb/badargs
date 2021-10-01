@@ -32,6 +32,7 @@
 
 mod macros;
 mod parse;
+mod reporting;
 mod schema;
 
 use crate::parse::CliArgs;
@@ -56,9 +57,11 @@ where
 {
     let arg_schema = Schema::create::<S>().expect("Invalid schema!");
 
-    let args = CliArgs::from_args(&arg_schema, std::env::args()).expect("todo");
-
-    BadArgs { args }
+    let args = CliArgs::from_args(&arg_schema, std::env::args());
+    match args {
+        Ok(args) => BadArgs { args },
+        Err(err) => reporting::report(err),
+    }
 }
 
 ///
@@ -88,6 +91,11 @@ impl BadArgs {
     {
         let long_name = T::long();
         self.args.get::<T::Content>(long_name)
+    }
+
+    /// Get all unnamed additional arguments
+    pub fn unnamed(&self) -> &[String] {
+        self.args.unnamed()
     }
 }
 
@@ -123,6 +131,8 @@ mod sealed {
 }
 
 mod error {
+    use crate::schema::SchemaKind;
+
     /// Invalid schema
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub enum SchemaError {
@@ -133,10 +143,9 @@ mod error {
     /// Invalid arguments provided
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub enum CallError {
-        SingleMinus,
         ShortFlagNotFound(char),
         LongFlagNotFound(String),
-        ExpectedValue(String),
+        ExpectedValue(String, SchemaKind),
         INan(String),
         UNan(String),
         CombinedShortWithValue(String),

@@ -7,7 +7,11 @@ arg!(OLevel: "optimize" -> usize);
 fn main() {
     let args = badargs::badargs!(OutFile, Force, OLevel);
 
-    let _outfile = args.get::<OutFile>();
-    let _force = args.get::<Force>();
-    let _o_level = args.get::<OLevel>();
+    let outfile = args.get::<OutFile>();
+    let force = args.get::<Force>();
+    let o_level = args.get::<OLevel>();
+
+    println!("output:  {:?}", outfile);
+    println!("force:   {:?}", force);
+    println!("o-level: {:?}", o_level);
 }

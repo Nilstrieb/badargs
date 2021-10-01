@@ -65,7 +65,8 @@ fn parse_shorts(
 
         parse_value(command.kind, results, &command.long, args)?;
     } else {
-        return Err(CallError::SingleMinus);
+        // '-' is a valid argument, like the `cat -`
+        results.unnamed.push("-".to_string());
     }
 
     for flag in all_shorts {
@@ -106,13 +107,13 @@ fn parse_value(
         SchemaKind::String => {
             let string = args
                 .next()
-                .ok_or_else(|| CallError::ExpectedValue(long.to_string()))?;
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?;
             results.insert(long, Box::new(string));
         }
         SchemaKind::INum => {
             let integer = args
                 .next()
-                .ok_or_else(|| CallError::ExpectedValue(long.to_string()))?
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
                 .parse::<isize>()
                 .map_err(|_| CallError::INan(long.to_string()))?;
             results.insert(long, Box::new(integer))
@@ -120,7 +121,7 @@ fn parse_value(
         SchemaKind::UNum => {
             let integer = args
                 .next()
-                .ok_or_else(|| CallError::ExpectedValue(long.to_string()))?
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
                 .parse::<usize>()
                 .map_err(|_| CallError::UNan(long.to_string()))?;
             results.insert(long, Box::new(integer))
