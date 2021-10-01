@@ -39,3 +39,9 @@ The following return types are currently available:
 
 Boolean values can only be `None` or `Some`.  
 The other values can be `None` or `Some(_)`
+
+# Todo
+
+Automatic `--help` handling
+
+(Maybe) adding metadata, for example for `--version`
