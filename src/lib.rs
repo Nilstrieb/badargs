@@ -32,8 +32,7 @@ where
 /// ```
 /// # use badargs::arg;
 /// arg!(Force: "force", 'f' -> bool);
-///
-/// arg!(OutFile: "output", 'o' -> String, required);
+/// arg!(OutFile: "output", 'o' -> String);
 /// // OutFile now implements CliArg
 /// ```
 // This trait requires any because some dynamic typing is done in the background
@@ -42,7 +41,6 @@ pub trait CliArg: Any {
 
     fn long() -> &'static str;
     fn short() -> Option<char>;
-    fn required() -> bool;
 }
 
 /// The struct containing parsed argument information
@@ -107,8 +105,9 @@ mod error {
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub enum CallError {
         SingleMinus,
-        UnnamedArgument,
         ShortFlagNotFound(char),
         ExpectedValue(String),
+        INan(String),
+        UNan(String),
     }
 }

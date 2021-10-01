@@ -2,19 +2,12 @@
 macro_rules! arg {
     // implicit optional
     ($name:ident: $long:literal, $short:literal -> $result:ty) => {
-        arg!(@$name: ($long, ::std::option::Option::Some($short)) -> $result, false);
+        arg!(@$name: ($long, ::std::option::Option::Some($short)) -> $result);
     };
     ($name:ident: $long:literal -> $result:ty) => {
-        arg!(@$name: ($long, ::std::option::Option::None) -> $result, false);
+        arg!(@$name: ($long, ::std::option::Option::None) -> $result);
     };
-    // required
-    ($name:ident: $long:literal, $short:literal -> $result:ty, required) => {
-        arg!(@$name: ($long, ::std::option::Option::Some($short)) -> $result, true);
-    };
-    ($name:ident: $long:literal -> $result:ty, required) => {
-        arg!(@$name: ($long, ::std::option::Option::None) -> $result, true);
-    };
-    (@$name:ident: ($long:literal, $short:expr) -> $result:ty, $required:literal) => {
+    (@$name:ident: ($long:literal, $short:expr) -> $result:ty) => {
         #[derive(Default)]
         struct $name;
 
@@ -27,10 +20,6 @@ macro_rules! arg {
 
             fn short() -> Option<char> {
                 $short
-            }
-
-            fn required() -> bool {
-                $required
             }
         }
     };

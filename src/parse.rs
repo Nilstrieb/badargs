@@ -9,6 +9,7 @@ type Result<T> = std::result::Result<T, CallError>;
 #[derive(Debug, Default)]
 pub struct CliArgs {
     args: HashMap<&'static str, Box<dyn Any>>,
+    unnamed: Vec<String>,
 }
 
 impl CliArgs {
@@ -21,7 +22,7 @@ impl CliArgs {
                 parse_shorts(schema, &mut result, shorts, &mut args)?;
             } else if let Some(_longs) = arg.strip_prefix("--") {
             } else {
-                return Err(CallError::UnnamedArgument);
+                result.unnamed.push(arg);
             }
         }
 
@@ -33,6 +34,10 @@ impl CliArgs {
     pub fn get<T: Any>(&self, long: &str) -> Option<&T> {
         let any = self.args.get(long)?;
         any.downcast_ref()
+    }
+
+    pub fn unnamed(&self) -> &[String] {
+        &self.unnamed
     }
 
     fn insert(&mut self, long: &'static str, value: Box<dyn Any>) {
@@ -62,12 +67,30 @@ fn parse_shorts(
 
         match command.kind {
             SchemaKind::String => {
-                let next = args
+                let string = args
                     .next()
                     .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?;
-                results.insert(command.long, Box::new(next));
+                results.insert(command.long, Box::new(string));
             }
-            _ => todo!(),
+            SchemaKind::INum => {
+                let integer = args
+                    .next()
+                    .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?
+                    .parse::<isize>()
+                    .map_err(|_| CallError::INan(command.long.to_string()))?;
+                results.insert(command.long, Box::new(integer))
+            }
+            SchemaKind::UNum => {
+                let integer = args
+                    .next()
+                    .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?
+                    .parse::<usize>()
+                    .map_err(|_| CallError::UNan(command.long.to_string()))?;
+                results.insert(command.long, Box::new(integer))
+            }
+            SchemaKind::Bool => {
+                results.insert(command.long, Box::new(true));
+            }
         }
     } else {
         return Err(CallError::SingleMinus);
@@ -84,7 +107,7 @@ mod test {
     use crate::arg;
     use crate::schema::Schema;
 
-    arg!(OutFile: "output", 'o' -> Option<String>);
+    arg!(OutFile: "output", 'o' -> String);
     arg!(Input: "input", 'i' -> String);
     arg!(Force: "force", 'f' -> bool);
     arg!(SetUpstream: "set-upstream" -> String);
@@ -107,6 +130,19 @@ mod test {
     #[test]
     fn single_string_arg() {
         let args = parse_args("-i stdin").unwrap();
+        assert_eq!(args.get::<String>("input"), Some(&"stdin".to_string()))
+    }
+
+    #[test]
+    fn two_unnamed() {
+        let args = parse_args("hallo welt").unwrap();
+        assert_eq!(args.unnamed(), &["hallo", "welt"]);
+    }
+
+    #[test]
+    fn arg_param_and_unnamed() {
+        let args = parse_args("-i stdin uwu").unwrap();
+        assert_eq!(args.unnamed(), &["uwu"]);
         assert_eq!(args.get::<String>("input"), Some(&"stdin".to_string()))
     }
 }
