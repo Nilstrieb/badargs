@@ -1,5 +1,5 @@
 use crate::error::CallError;
-use crate::schema::{Schema, SchemaKind, SchemaKindType};
+use crate::schema::{Schema, SchemaKind};
 use std::any::Any;
 use std::collections::HashMap;
 use std::iter::Peekable;
@@ -60,13 +60,8 @@ fn parse_shorts(
             .short(flag)
             .ok_or_else(|| CallError::ShortFlagNotFound(flag))?;
 
-        let inner_kind = match command.kind {
-            SchemaKind::Required(inner) => inner,
-            SchemaKind::Optional(inner) => inner,
-        };
-
-        match inner_kind {
-            SchemaKindType::String => {
+        match command.kind {
+            SchemaKind::String => {
                 let next = args
                     .next()
                     .ok_or_else(|| CallError::ExpectedValue(command.long.to_string()))?;

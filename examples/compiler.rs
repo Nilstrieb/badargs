@@ -1,6 +1,6 @@
 use badargs::arg;
 
-arg!(OutFile: "output", 'o' -> Option<String>);
+arg!(OutFile: "output", 'o' -> String, required);
 arg!(Force: "force", 'f' -> bool);
 arg!(OLevel: "optimize" -> usize);
 

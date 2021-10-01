@@ -7,18 +7,12 @@ use super::Result;
 use crate::{CliArg, CliReturnValue, SchemaError};
 use std::collections::HashMap;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum SchemaKind {
-    Required(SchemaKindType),
-    Optional(SchemaKindType),
-}
-
 ///
 /// The type of value the argument returns
 ///
 /// This could *maybe* also be solved with trait objects but lets keep this for now
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum SchemaKindType {
+pub enum SchemaKind {
     String,
     Bool,
     INum,
@@ -32,6 +26,7 @@ pub struct SchemaCommand {
     pub kind: SchemaKind,
     pub long: &'static str,
     pub short: Option<char>,
+    pub required: bool,
 }
 
 ///
@@ -107,14 +102,17 @@ where
     T: CliArg,
 {
     fn add_schema(schema: &mut Schema) -> Result<()> {
-        let kind = T::Content::kind();
-        let long = T::long();
         let short = T::short();
-        let command = SchemaCommand { kind, long, short };
-        if let Some(short_name) = short {
-            schema.add_short_command(short_name, command)?;
+        let command = SchemaCommand {
+            kind: T::Content::kind(),
+            long: T::long(),
+            short,
+            required: T::required(),
+        };
+        if let Some(short) = short {
+            schema.add_short_command(short, command)?;
         }
-        schema.add_command(long, command)
+        schema.add_command(T::long(), command)
     }
 }
 
@@ -132,9 +130,10 @@ mod test {
     fn one_command_schema() {
         let schema = Schema::create::<OutFile>().unwrap();
         let out_file = SchemaCommand {
-            kind: SchemaKind::Optional(SchemaKindType::String),
+            kind: SchemaKind::String,
             long: "output",
             short: Some('o'),
+            required: false,
         };
         assert_eq!(schema.longs.get("output"), Some(&out_file));
         assert_eq!(schema.shorts.get(&'o'), Some(&out_file));
@@ -145,14 +144,16 @@ mod test {
     fn two_command_schema() {
         let schema = Schema::create::<(OutFile, Force)>().unwrap();
         let out_file = SchemaCommand {
-            kind: SchemaKind::Optional(SchemaKindType::String),
+            kind: SchemaKind::String,
             long: "output",
             short: Some('o'),
+            required: false,
         };
         let force = SchemaCommand {
-            kind: SchemaKind::Required(SchemaKindType::Bool),
+            kind: SchemaKind::Bool,
             long: "force",
             short: Some('f'),
+            required: true,
         };
 
         assert_eq!(schema.longs.get("output"), Some(&out_file));
@@ -168,19 +169,22 @@ mod test {
     fn three_command_schema() {
         let schema = Schema::create::<(OutFile, (Force, SetUpstream))>().unwrap();
         let out_file = SchemaCommand {
-            kind: SchemaKind::Optional(SchemaKindType::String),
+            kind: SchemaKind::String,
             long: "output",
             short: Some('o'),
+            required: false,
         };
         let force = SchemaCommand {
-            kind: SchemaKind::Required(SchemaKindType::Bool),
+            kind: SchemaKind::Bool,
             long: "force",
             short: Some('f'),
+            required: true,
         };
         let set_upstream = SchemaCommand {
-            kind: SchemaKind::Required(SchemaKindType::String),
+            kind: SchemaKind::String,
             long: "set-upstream",
             short: None,
+            required: true,
         };
 
         assert_eq!(schema.longs.get("output"), Some(&out_file));

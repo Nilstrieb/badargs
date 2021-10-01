@@ -31,7 +31,9 @@ where
 ///
 /// ```
 /// # use badargs::arg;
-/// arg!(OutFile: "output", 'o' -> Option<String>);
+/// arg!(Force: "force", 'f' -> bool);
+///
+/// arg!(OutFile: "output", 'o' -> String, required);
 /// // OutFile now implements CliArg
 /// ```
 // This trait requires any because some dynamic typing is done in the background
@@ -40,6 +42,7 @@ pub trait CliArg: Any {
 
     fn long() -> &'static str;
     fn short() -> Option<char>;
+    fn required() -> bool;
 }
 
 /// The struct containing parsed argument information
@@ -79,7 +82,6 @@ macro_rules! impl_cli_return {
 
 impl_cli_return!(
     for String => String;
-    for Option<String> => OptionString;
     for bool => Bool;
     for isize => INum;
     for usize => UNum
@@ -90,7 +92,7 @@ mod sealed {
     macro_rules! impl_ {
         ($($name:ty),+) => {$(impl SealedCliReturnValue for $name{})+};
     }
-    impl_!(String, Option<String>, bool, usize, isize);
+    impl_!(String, bool, usize, isize);
 }
 
 mod error {
