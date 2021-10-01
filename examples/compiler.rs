@@ -5,7 +5,7 @@ arg!(Force: "force", 'f' -> bool);
 arg!(OLevel: "optimize" -> usize);
 
 fn main() {
-    let args = badargs::badargs::<(OutFile, (Force, OLevel))>().unwrap();
+    let args = badargs::badargs!(OutFile, Force, OLevel);
 
     let _outfile = args.get::<OutFile>();
     let _force = args.get::<Force>();

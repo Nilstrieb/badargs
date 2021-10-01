@@ -1,3 +1,35 @@
+//!
+//! # badargs
+//!
+//! A fully type-safe argument parser without any proc macros!
+//!
+//! Declare your arguments with structs. You probably want to use the macro for that
+//! ```
+//! # use badargs::arg;
+//! arg!(Force: "force", 'f' -> bool);
+//! arg!(OutFile: "output", 'o' -> String);
+//! ```
+//! Then you call the [`badargs`] function with all of your declared arguments. You probably
+//! want to use a macro for that too.
+//!
+//! You can also use the [`badargs!`] macro if you have many arguments and don't want to nest
+//! the tuples manually
+//! ```
+//! # use badargs::arg;
+//! # arg!(Force: "force", 'f' -> bool);
+//! # arg!(OutFile: "output", 'o' -> String);
+//! let args = badargs::badargs!(Force, OutFile);
+//! ```
+//! You can then get values using your declared arguments
+//! ```
+//! # use badargs::arg;
+//! # arg!(Force: "force", 'f' -> bool);
+//! # arg!(OutFile: "output", 'o' -> String);
+//! # let args = badargs::badargs!(Force, OutFile);
+//! let force: Option<&bool> = args.get::<Force>();
+//! let out_file: Option<&String> = args.get::<OutFile>();
+//! ```
+
 mod macros;
 mod parse;
 mod schema;
@@ -13,15 +45,20 @@ pub type Result<T> = std::result::Result<T, SchemaError>;
 
 ///
 /// Parses the command line arguments based on the provided schema S
-pub fn badargs<S>() -> Result<BadArgs>
+///
+/// # Panics
+///
+/// This function panics if an invalid schema is entered
+///
+pub fn badargs<S>() -> BadArgs
 where
     S: IntoSchema,
 {
-    let arg_schema = Schema::create::<S>()?;
+    let arg_schema = Schema::create::<S>().expect("Invalid schema!");
 
     let args = CliArgs::from_args(&arg_schema, std::env::args()).expect("todo");
 
-    Ok(BadArgs { args })
+    BadArgs { args }
 }
 
 ///
@@ -29,12 +66,6 @@ where
 ///
 /// This is mostly done using unit structs and the `arg!` macro
 ///
-/// ```
-/// # use badargs::arg;
-/// arg!(Force: "force", 'f' -> bool);
-/// arg!(OutFile: "output", 'o' -> String);
-/// // OutFile now implements CliArg
-/// ```
 // This trait requires any because some dynamic typing is done in the background
 pub trait CliArg: Any {
     type Content: CliReturnValue;
@@ -51,14 +82,12 @@ pub struct BadArgs {
 
 impl BadArgs {
     /// Get the content of an argument by providing the type of the argument
-    pub fn get<T>(&self) -> &T::Content
+    pub fn get<T>(&self) -> Option<&T::Content>
     where
         T: CliArg,
     {
         let long_name = T::long();
-        self.args
-            .get::<T::Content>(long_name)
-            .expect("it has been validated")
+        self.args.get::<T::Content>(long_name)
     }
 }
 
