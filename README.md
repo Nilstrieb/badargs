@@ -40,7 +40,7 @@ The following return types are currently available:
 * usize
 * f64
 
-Boolean values can only be `None` or `Some`.  
+Boolean values can only be `None` or `Some(true)`.  
 The other values can be `None` or `Some(_)`
 
 # Todo
