@@ -1,8 +1,10 @@
+Node: badargs is not 1.0 yet, so it may change at any time. Use it with caution.
+
 # badargs
 
 A zero-dependency full type-safe argument parser.
 
-It's corect enough for what it does.
+It's correct enough for what it does.
 
 `badargs` handles non Utf8 input by just printing an error and exiting the program gracefully.
 
