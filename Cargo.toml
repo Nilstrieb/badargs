@@ -1,6 +1,6 @@
 [package]
 name = "badargs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 license = "MIT"
 description = "Type safe zero-dependency argument parser"
@@ -8,7 +8,7 @@ homepage = "https://github.com/Nilstrieb/badargs"
 repository = "https://github.com/Nilstrieb/badargs"
 readme = "README.md"
 keywords = ["argument-parsing", "zero-dependency", "type-safe"]
-categories = ["Command-line interface"]
+categories = ["command-line-interface"]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
