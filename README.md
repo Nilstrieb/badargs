@@ -36,6 +36,7 @@ The following return types are currently available:
 * bool
 * isize
 * usize
+* f64
 
 Boolean values can only be `None` or `Some`.  
 The other values can be `None` or `Some(_)`

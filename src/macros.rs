@@ -23,7 +23,6 @@
 /// ```
 #[macro_export]
 macro_rules! arg {
-    // implicit optional
     ($name:ident: $long:literal, $short:literal -> $result:ty) => {
         arg!(@$name: ($long, ::std::option::Option::Some($short)) -> $result);
     };

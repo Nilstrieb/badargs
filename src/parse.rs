@@ -93,6 +93,9 @@ fn parse_long(
     long: &str,
     args: &mut impl Iterator<Item = OsString>,
 ) -> Result<()> {
+    if long == "help" {
+        return Err(CallError::HelpPage);
+    }
     let command = schema
         .long(long)
         .ok_or_else(|| CallError::LongFlagNotFound(long.to_string()))?;
@@ -115,7 +118,7 @@ fn parse_value(
                 .map_err(CallError::InvalidUtf8)?;
             results.insert(long, Box::new(string));
         }
-        SchemaKind::INum => {
+        SchemaKind::IInt => {
             let integer = args
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
@@ -125,7 +128,7 @@ fn parse_value(
                 .map_err(|_| CallError::INan(long.to_string()))?;
             results.insert(long, Box::new(integer))
         }
-        SchemaKind::UNum => {
+        SchemaKind::UInt => {
             let integer = args
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
@@ -134,6 +137,16 @@ fn parse_value(
                 .parse::<usize>()
                 .map_err(|_| CallError::UNan(long.to_string()))?;
             results.insert(long, Box::new(integer))
+        }
+        SchemaKind::Num => {
+            let float = args
+                .next()
+                .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
+                .into_string()
+                .map_err(CallError::InvalidUtf8)?
+                .parse::<f64>()
+                .map_err(|_| CallError::NNan(long.to_string()))?;
+            results.insert(long, Box::new(float))
         }
         SchemaKind::Bool => {
             results.insert(long, Box::new(true));

@@ -37,10 +37,10 @@ mod schema;
 
 use crate::parse::CliArgs;
 use crate::schema::{IntoSchema, Schema, SchemaKind};
+use std::any::Any;
 
 pub use error::SchemaError;
 pub use macros::*;
-use std::any::Any;
 
 pub type Result<T> = std::result::Result<T, SchemaError>;
 
@@ -60,7 +60,7 @@ where
     let args = CliArgs::from_args(&arg_schema, std::env::args_os());
     match args {
         Ok(args) => BadArgs { args },
-        Err(err) => reporting::report(err),
+        Err(err) => reporting::report(err, &arg_schema),
     }
 }
 
@@ -106,7 +106,7 @@ pub trait CliReturnValue: sealed::SealedCliReturnValue {
 }
 
 macro_rules! impl_cli_return {
-    ($(for $ty:ty => $type:ident);+) => {$(
+    ($(for $ty:ty => $type:ident);+;) => {$(
         impl CliReturnValue for $ty {
             fn kind() -> SchemaKind {
                 SchemaKind::$type
@@ -118,8 +118,9 @@ macro_rules! impl_cli_return {
 impl_cli_return!(
     for String => String;
     for bool => Bool;
-    for isize => INum;
-    for usize => UNum
+    for isize => IInt;
+    for usize => UInt;
+    for f64 => Num;
 );
 
 mod sealed {
@@ -127,7 +128,7 @@ mod sealed {
     macro_rules! impl_ {
         ($($name:ty),+) => {$(impl SealedCliReturnValue for $name{})+};
     }
-    impl_!(String, bool, usize, isize);
+    impl_!(String, bool, usize, isize, f64);
 }
 
 mod error {
@@ -149,7 +150,9 @@ mod error {
         ExpectedValue(String, SchemaKind),
         INan(String),
         UNan(String),
+        NNan(String),
         CombinedShortWithValue(String),
         InvalidUtf8(OsString),
+        HelpPage,
     }
 }

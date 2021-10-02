@@ -15,8 +15,9 @@ use std::collections::HashMap;
 pub enum SchemaKind {
     String,
     Bool,
-    INum,
-    UNum,
+    IInt,
+    UInt,
+    Num,
 }
 
 ///
@@ -61,6 +62,10 @@ impl Schema {
 
     pub fn long(&self, name: &str) -> Option<&SchemaCommand> {
         self.longs.get(name)
+    }
+
+    pub fn arguments(&self) -> impl Iterator<Item = &SchemaCommand> {
+        self.longs.values()
     }
 
     fn add_short_command(&mut self, short_name: char, command: SchemaCommand) -> Result<()> {
