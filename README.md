@@ -47,9 +47,7 @@ The other values can be `None` or `Some(_)`
 
 # Todo
 
-Automatic `--help` handling
-
-(Maybe) adding metadata, for example for `--version`
+Being able to add more metadata for better `--help` or `--version`
 
 # Why doesn't badargs have x?
 
