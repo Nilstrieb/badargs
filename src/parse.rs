@@ -17,9 +17,7 @@ impl CliArgs {
         let mut result = Self::default();
 
         while let Some(arg) = args.next() {
-            let arg = arg
-                .into_string()
-                .map_err(|os_str| CallError::InvalidUtf8(os_str))?;
+            let arg = arg.into_string().map_err(CallError::InvalidUtf8)?;
 
             if let Some(long) = arg.strip_prefix("--") {
                 parse_long(schema, &mut result, long, &mut args)?;
@@ -66,9 +64,9 @@ fn parse_shorts(
     if let Some(flag) = first_flag {
         let command = schema
             .short(flag)
-            .ok_or_else(|| CallError::ShortFlagNotFound(flag))?;
+            .ok_or(CallError::ShortFlagNotFound(flag))?;
 
-        parse_value(command.kind, results, &command.long, args)?;
+        parse_value(command.kind, results, command.long, args)?;
     } else {
         // '-' is a valid argument, like the `cat -`
         results.unnamed.push("-".to_string());
@@ -77,10 +75,10 @@ fn parse_shorts(
     for flag in all_shorts {
         let command = schema
             .short(flag)
-            .ok_or_else(|| CallError::ShortFlagNotFound(flag))?;
+            .ok_or(CallError::ShortFlagNotFound(flag))?;
 
         if let SchemaKind::Bool = command.kind {
-            results.insert(&command.long, Box::new(true));
+            results.insert(command.long, Box::new(true));
         } else {
             return Err(CallError::CombinedShortWithValue(command.long.to_string()));
         }
@@ -99,7 +97,7 @@ fn parse_long(
         .long(long)
         .ok_or_else(|| CallError::LongFlagNotFound(long.to_string()))?;
 
-    parse_value(command.kind, results, &command.long, args)
+    parse_value(command.kind, results, command.long, args)
 }
 
 fn parse_value(
@@ -114,7 +112,7 @@ fn parse_value(
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
                 .into_string()
-                .map_err(|os_str| CallError::InvalidUtf8(os_str))?;
+                .map_err(CallError::InvalidUtf8)?;
             results.insert(long, Box::new(string));
         }
         SchemaKind::INum => {
@@ -122,7 +120,7 @@ fn parse_value(
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
                 .into_string()
-                .map_err(|os_str| CallError::InvalidUtf8(os_str))?
+                .map_err(CallError::InvalidUtf8)?
                 .parse::<isize>()
                 .map_err(|_| CallError::INan(long.to_string()))?;
             results.insert(long, Box::new(integer))
@@ -132,7 +130,7 @@ fn parse_value(
                 .next()
                 .ok_or_else(|| CallError::ExpectedValue(long.to_string(), kind))?
                 .into_string()
-                .map_err(|os_str| CallError::InvalidUtf8(os_str))?
+                .map_err(CallError::InvalidUtf8)?
                 .parse::<usize>()
                 .map_err(|_| CallError::UNan(long.to_string()))?;
             results.insert(long, Box::new(integer))

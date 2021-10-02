@@ -48,7 +48,7 @@ impl Schema {
     }
 
     fn add_command(&mut self, long_name: &'static str, command: SchemaCommand) -> Result<()> {
-        if let Some(_) = self.longs.insert(long_name, command) {
+        if self.longs.insert(long_name, command).is_some() {
             Err(SchemaError::NameAlreadyExists(long_name.to_string()))
         } else {
             Ok(())
@@ -64,7 +64,7 @@ impl Schema {
     }
 
     fn add_short_command(&mut self, short_name: char, command: SchemaCommand) -> Result<()> {
-        if let Some(_) = self.shorts.insert(short_name, command) {
+        if self.shorts.insert(short_name, command).is_some() {
             Err(SchemaError::NameAlreadyExists(short_name.to_string()))
         } else {
             Ok(())
