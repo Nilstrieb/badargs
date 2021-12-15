@@ -52,21 +52,25 @@ macro_rules! arg {
 /// This macro lets you specify your arguments in a flat list, and then converts them into
 /// nested tuples for you, since that's what's internally used.
 /// ```
-/// # use badargs::arg;
-/// # arg!(Force: "force", 'f' -> bool);
-/// # arg!(OutFile: "outfile", 't' -> bool);
-/// # arg!(SetUpstream: "set-upstream", 'x' -> bool);
-/// # fn main() {
-/// let args = badargs::badargs!(Force, OutFile, SetUpstream);
-/// # }
+/// use badargs::arg;
+/// arg!(Force: "force", 'f' -> bool);
+/// arg!(OutFile: "outfile", 't' -> bool);
+/// arg!(SetUpstream: "set-upstream", 'x' -> bool);
+///
+/// fn main() {
+///     let args = badargs::badargs!(Force, OutFile, SetUpstream);
+/// }
 /// ```
 /// will be expanded into
 /// ```
-/// # use badargs::arg;
-/// # arg!(Force: "force", 'f' -> bool);
-/// # arg!(OutFile: "outfile", 't' -> bool);
-/// # arg!(SetUpstream: "set-upstream", 'x' -> bool);
-/// let args = badargs::badargs::<(Force, (OutFile, SetUpstream))>();
+/// use badargs::arg;
+/// arg!(Force: "force", 'f' -> bool);
+/// arg!(OutFile: "outfile", 't' -> bool);
+/// arg!(SetUpstream: "set-upstream", 'x' -> bool);
+///
+/// fn main() {
+///     let args = badargs::badargs::<(Force, (OutFile, SetUpstream))>();
+/// }
 /// ```
 /// This only provides a minor benefit for programs with a small amount of args, but is
 /// very useful for larger arg amounts.
@@ -82,7 +86,6 @@ macro_rules! badargs {
         {
             #[allow(unused_parens)] // allow this because there might only be one arg
             {
-
                 $crate::badargs::<($crate::badargs!(@inner $($tail),+))>()
             }
         }
