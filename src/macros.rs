@@ -1,12 +1,25 @@
 ///
 /// Declare your arguments using this macro.
+///
+/// Possible patterns:
 /// ```
-/// # use badargs::arg;
+/// use badargs::arg;
+///
+/// arg!(LongOrShort: "long-or-short", 's' -> bool);
+/// arg!(OnlyLong: "only-long" -> bool);
+/// arg!(pub OtherModule: "other-module" -> bool);
+/// ```
+///
+///
+/// ```
+/// use badargs::arg;
+///
 /// arg!(Force: "force", 'f' -> bool);
 /// ```
 /// is a shorthand for
 /// ```
-/// # use badargs::{arg, CliArg};
+/// use badargs::{arg, CliArg};
+///
 /// struct Force;
 ///
 /// impl CliArg for Force {
@@ -23,15 +36,15 @@
 /// ```
 #[macro_export]
 macro_rules! arg {
-    ($name:ident: $long:literal, $short:literal -> $result:ty) => {
-        arg!(@$name: ($long, ::std::option::Option::Some($short)) -> $result);
+    ($vis:vis $name:ident: $long:literal, $short:literal -> $result:ty) => {
+        arg!(@$vis $name: ($long, ::std::option::Option::Some($short)) -> $result);
     };
-    ($name:ident: $long:literal -> $result:ty) => {
-        arg!(@$name: ($long, ::std::option::Option::None) -> $result);
+    ($vis:vis $name:ident: $long:literal -> $result:ty) => {
+        arg!(@$vis $name: ($long, ::std::option::Option::None) -> $result);
     };
-    (@$name:ident: ($long:literal, $short:expr) -> $result:ty) => {
+    (@$vis:vis $name:ident: ($long:literal, $short:expr) -> $result:ty) => {
         #[derive(Default)]
-        struct $name;
+        $vis struct $name;
 
         impl $crate::CliArg for $name {
             type Content = $result;
@@ -48,7 +61,8 @@ macro_rules! arg {
 }
 
 ///
-/// A shorthand for calling the [`badargs::badargs`] main function
+/// A shorthand for calling the [`badargs`](crate::badargs()) main function
+///
 /// This macro lets you specify your arguments in a flat list, and then converts them into
 /// nested tuples for you, since that's what's internally used.
 /// ```

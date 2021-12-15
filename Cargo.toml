@@ -1,6 +1,6 @@
 [package]
 name = "badargs"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2018"
 license = "MIT"
 description = "Type safe zero-dependency argument parser"

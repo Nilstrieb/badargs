@@ -5,29 +5,34 @@
 //!
 //! Declare your arguments with structs. You probably want to use the macro for that
 //! ```
-//! # use badargs::arg;
+//! use badargs::arg;
+//!
 //! arg!(Force: "force", 'f' -> bool);
 //! arg!(OutFile: "output", 'o' -> String);
 //! ```
-//! Then you call the [`badargs`] function with all of your declared arguments. You probably
-//! want to use a macro for that too.
 //!
-//! You can also use the [`badargs!`] macro if you have many arguments and don't want to nest
-//! the tuples manually
+//! The recommended way to use `badargs` is by invoking the macro [`badargs!`]
 //! ```
-//! # use badargs::arg;
-//! # arg!(Force: "force", 'f' -> bool);
-//! # arg!(OutFile: "output", 'o' -> String);
+//! use badargs::arg;
+//!
+//! arg!(Force: "force", 'f' -> bool);
+//! arg!(OutFile: "output", 'o' -> String);
+//!
 //! let args = badargs::badargs!(Force, OutFile);
 //! ```
-//! You can then get values using your declared arguments
+//!
+//! You can also invoke the [`badargs()`] function directly
+//!
+//! Getting the values is done using the [`BadArgs::get`] function
 //! ```
-//! # use badargs::arg;
-//! # arg!(Force: "force", 'f' -> bool);
-//! # arg!(OutFile: "output", 'o' -> String);
-//! # let args = badargs::badargs!(Force, OutFile);
+//! use badargs::arg;
+//! arg!(Force: "force", 'f' -> bool);
+//! arg!(OutFile: "output", 'o' -> String);
+//!
+//! let args = badargs::badargs!(Force, OutFile);
+//!
 //! let force: Option<&bool> = args.get::<Force>();
-//! let out_file: Option<&String> = args.get::<OutFile>();
+//! let out_file = args.get::<OutFile>();
 //! ```
 
 mod macros;
@@ -138,7 +143,9 @@ mod error {
     /// Invalid schema
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub enum SchemaError {
+        /// The argument name was already provided for a different argument
         NameAlreadyExists(String),
+        /// Currently not used
         InvalidSchema(String),
     }
 
